@@ -106,6 +106,35 @@
     </main>
   </div>
 
+  <!-- ================= Modal สำหรับกรอกข้อมูลขอยืมหนังสือ ================= -->
+  <div id="borrow-modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 relative">
+      <h3 class="text-xl font-bold text-slate-800 mb-2">📖 ยืนยันการยืมหนังสือ</h3>
+      <p id="modal-book-title" class="text-sm text-indigo-600 font-medium mb-4"></p>
+      
+      <form onsubmit="submitBorrow(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">ชื่อ-นามสกุล:</label>
+          <input type="text" id="borrower-name" placeholder="กรอกชื่อและนามสกุลของคุณ" required class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">ชั้น (เช่น ม.5):</label>
+            <input type="text" id="borrower-grade" placeholder="เช่น ม.5/1" required class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">ห้อง:</label>
+            <input type="text" id="borrower-room" placeholder="เช่น 2" required class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          </div>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeBorrowModal()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-2 rounded-lg text-sm font-medium transition">ยกเลิก</button>
+          <button type="submit" id="btn-confirm-borrow" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium transition shadow">ยืนยันการยืม</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <footer class="text-center py-6 text-slate-400 border-t border-slate-200 mt-12 text-sm">
     © 2026 SmartLibrary - ระบบบริหารจัดการห้องสมุดโรงเรียน
   </footer>
@@ -114,10 +143,14 @@
     const defaultImg = "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=400&q=80";
     let adminPassword = localStorage.getItem('adminPassword') || '1234';
     
-    // ข้อมูลจำลองเบื้องต้น (สามารถปรับเปลี่ยนหรือดึงเพิ่มได้)
+    // URL ของ Apps Script ที่คุณเพิ่ง Deploy สำเร็จ
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycb2-4X_XgoPTB4MPQXcvP7Bj38MD6EnJo8IZ5IMaTZ1ksydzKJjSthOfc52m5c7/exec";
+    
     let booksData = [
-      { id: '1', title: 'CONVER พูดมันส์ 1,000 ประโยค', author: 'ครูดิว OPENDURIAN', category: 'English', image: 'https://api.chulabook.com/images/pid-184204.webp', stock: 1 }
+      { id: '1', title: 'CONVER พูดมันส์ 1,000 ประโยค', author: 'ครูดิว OPENDURIAN', category: 'English', image: 'https://api.chulabook.com/images/pid-184204.webp', stock: 1, borrowedBy: null }
     ];
+
+    let selectedBookId = null;
 
     function renderBooks() {
       const container = document.getElementById('book-list');
@@ -137,14 +170,15 @@
               <div class="p-4">
                 <h4 class="text-base font-bold text-slate-800 line-clamp-1">${book.title}</h4>
                 <p class="text-xs text-slate-500 mt-1">ผู้แต่ง: ${book.author}</p>
-                <p class="text-xs ${isAvailable ? 'text-emerald-600' : 'text-rose-500'} font-semibold mt-2">
-                  สถานะ: ${isAvailable ? 'คงเหลือ ' + book.stock + ' เล่ม' : 'ถูกยืมหมดแล้ว'}
+                <p class="text-xs font-semibold mt-2 ${isAvailable ? 'text-emerald-600' : 'text-rose-500'}">
+                  ${isAvailable ? '✅ คงเหลือ ' + book.stock + ' เล่ม' : '❌ มีคนยืมแล้ว (ถูกยืมหมด)'}
                 </p>
+                ${!isAvailable && book.borrowerName ? `<p class="text-[11px] text-slate-400 mt-1">ผู้ยืม: ${book.borrowerName} (${book.borrowerGrade}/${book.borrowerRoom})</p>` : ''}
               </div>
             </div>
             <div class="p-4 pt-0">
-              <button onclick="alert('ระบบพร้อมใช้งาน')" class="w-full py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white shadow">
-                📖 กดยืมหนังสือ
+              <button onclick="openBorrowModal('${book.id}')" ${!isAvailable ? 'disabled' : ''} class="w-full py-2 rounded-lg text-sm font-medium shadow ${isAvailable ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}">
+                ${isAvailable ? '📖 กดยืมหนังสือ' : '🚫 ถูกยืมแล้ว'}
               </button>
             </div>
           </div>
@@ -158,6 +192,7 @@
       let html = '';
       booksData.forEach(book => {
         const imgUrl = book.image || defaultImg;
+        const isAvailable = book.stock > 0;
         html += `
           <tr class="border-b border-slate-100 hover:bg-slate-50">
             <td class="p-3">
@@ -166,14 +201,93 @@
             <td class="p-4 font-semibold text-slate-800">${book.title}</td>
             <td class="p-4 text-slate-600">${book.author}</td>
             <td class="p-4"><span class="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-md text-xs font-medium">${book.category}</span></td>
-            <td class="p-4 font-bold text-emerald-600">${book.stock} เล่ม</td>
+            <td class="p-4 font-bold ${isAvailable ? 'text-emerald-600' : 'text-rose-500'}">
+              ${isAvailable ? book.stock + ' เล่ม' : 'ถูกยืมแล้ว'}
+            </td>
             <td class="p-4 text-center">
-              <button onclick="alert('จัดการข้อมูล')" class="bg-amber-500 text-white text-xs px-2.5 py-1.5 rounded-lg">✏️ แก้ไข</button>
+              <button onclick="returnBook('${book.id}')" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs px-3 py-1.5 rounded-lg shadow-sm">🔄 คืนหนังสือ</button>
             </td>
           </tr>
         `;
       });
       tbody.innerHTML = html;
+    }
+
+    function openBorrowModal(bookId) {
+      selectedBookId = bookId;
+      const book = booksData.find(b => b.id === bookId);
+      if (book) {
+        document.getElementById('modal-book-title').innerText = `หนังสือ: ${book.title}`;
+        document.getElementById('borrower-name').value = '';
+        document.getElementById('borrower-grade').value = '';
+        document.getElementById('borrower-room').value = '';
+        document.getElementById('borrow-modal').classList.remove('hidden');
+      }
+    }
+
+    function closeBorrowModal() {
+      document.getElementById('borrow-modal').classList.add('hidden');
+      selectedBookId = null;
+    }
+
+    // ฟอร์มกดยืนยันการยืม
+    async function submitBorrow(e) {
+      e.preventDefault();
+      const name = document.getElementById('borrower-name').value.trim();
+      const grade = document.getElementById('borrower-grade').value.trim();
+      const room = document.getElementById('borrower-room').value.trim();
+      
+      const btn = document.getElementById('btn-confirm-borrow');
+      btn.disabled = true;
+      btn.innerText = "กำลังบันทึก...";
+
+      const book = booksData.find(b => b.id === selectedBookId);
+      if (book) {
+        book.stock = 0;
+        book.borrowerName = name;
+        book.borrowerGrade = grade;
+        book.borrowerRoom = room;
+
+        const payload = {
+          action: "borrow",
+          title: book.title,
+          name: name,
+          grade: grade,
+          room: room,
+          timestamp: new Date().toISOString()
+        };
+
+        try {
+          await fetch(SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            body: JSON.stringify(payload)
+          });
+          
+          alert(`ยืมหนังสือ "${book.title}" สำเร็จ!\nผู้ยืม: ${name} ชั้น ${grade}/${room}`);
+          closeBorrowModal();
+          renderBooks();
+          renderAdminBookTable();
+        } catch (error) {
+          alert("เกิดข้อผิดพลาด: " + error.message);
+        } finally {
+          btn.disabled = false;
+          btn.innerText = "ยืนยันการยืม";
+        }
+      }
+    }
+
+    function returnBook(bookId) {
+      const book = booksData.find(b => b.id === bookId);
+      if (book) {
+        book.stock = 1;
+        book.borrowerName = null;
+        book.borrowerGrade = null;
+        book.borrowerRoom = null;
+        alert(`คืนหนังสือ "${book.title}" เรียบร้อยแล้ว`);
+        renderBooks();
+        renderAdminBookTable();
+      }
     }
 
     // ระบบบีบอัดภาพความเร็วสูง
@@ -200,7 +314,7 @@
       });
     }
 
-    // ฟังก์ชันส่งข้อมูลเข้า Google Apps Script (Google Sheets)
+    // ฟังก์ชันส่งข้อมูลเพิ่มหนังสือเข้า Google Sheets
     async function addNewBook(e) {
       e.preventDefault();
       const btn = document.getElementById('btn-submit-book');
@@ -221,10 +335,8 @@
         image = urlImg;
       }
 
-      // 🔗 URL ของ Apps Script ที่คุณเพิ่ง Deploy
-      const SCRIPT_URL = "https://script.google.com/macros/s/AKfycb2-4X_XgoPTB4MPQXcvP7Bj38MD6EnJo8IZ5IMaTZ1ksydzKJjSthOfc52m5c7/exec";
-
       const payload = {
+        action: "addBook",
         title: title,
         author: author,
         category: category,
@@ -239,14 +351,12 @@
           body: JSON.stringify(payload)
         });
         
-        alert(`เพิ่มหนังสือ "${title}" เรียบร้อยแล้ว! (ข้อมูลส่งเข้า Google Sheets แล้ว)`);
+        alert(`เพิ่มหนังสือ "${title}" เรียบร้อยแล้ว!`);
         
-        // เพิ่มข้อมูลลงตารางหน้าจอชั่วคราว
-        booksData.push({ id: Date.now().toString(), title, author, category, image, stock });
+        booksData.push({ id: Date.now().toString(), title, author, category, image, stock, borrowedBy: null });
         renderBooks();
         renderAdminBookTable();
 
-        // ล้างค่าในฟอร์ม
         document.getElementById('new-title').value = '';
         document.getElementById('new-author').value = '';
         document.getElementById('new-category').value = '';
@@ -300,7 +410,6 @@
       }
     }
 
-    // โหลดแสดงผลเริ่มต้น
     renderBooks();
     renderAdminBookTable();
   </script>
