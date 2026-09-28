@@ -4,87 +4,208 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SmartLibrary - ระบบยืม-คืนหนังสือ</title>
-  <!-- ดึง Tailwind CSS มาใช้งาน -->
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-50 text-slate-800">
 
-  <!-- แถบเมนูด้านบน (Navbar) -->
-  <nav class="bg-indigo-600 text-white p-4 shadow-lg">
+  <!-- แถบเมนูด้านบน -->
+  <nav class="bg-indigo-600 text-white p-4 shadow-lg sticky top-0 z-50">
     <div class="max-w-6xl mx-auto flex justify-between items-center">
-      <h1 class="text-xl font-bold">📚 SmartLibrary</h1>
-      <div class="space-x-4">
-        <a href="#" class="hover:underline">หน้าแรก</a>
-        <a href="#" class="hover:underline">ค้นหาหนังสือ</a>
-        <a href="#" class="hover:underline">ประวัติการยืม</a>
+      <h1 class="text-xl font-bold cursor-pointer" onclick="switchTab('user')">📚 SmartLibrary</h1>
+      <div class="space-x-3">
+        <button onclick="switchTab('user')" id="btn-user" class="px-3 py-1.5 rounded-lg bg-indigo-700 font-medium text-sm">หน้าสมาชิก</button>
+        <button onclick="switchTab('admin')" id="btn-admin" class="px-3 py-1.5 rounded-lg hover:bg-indigo-500 font-medium text-sm bg-indigo-800">🔑 โหมดบรรณารักษ์ (Admin)</button>
       </div>
     </div>
   </nav>
 
-  <!-- ส่วนหัวข้อหลัก (Hero Section) -->
-  <header class="bg-indigo-700 text-white py-12 text-center">
-    <h2 class="text-3xl font-extrabold mb-2">ค้นพบความรู้ที่ไม่รู้จบ</h2>
-    <p class="text-indigo-200 mb-6">ค้นหาหนังสือ วิชาการ วรรณกรรม และเทคโนโลยี ยืมได้ง่ายๆ ผ่านระบบออนไลน์</p>
-    
-    <!-- ช่องค้นหา -->
-    <div class="max-w-md mx-auto px-4">
-      <input type="text" placeholder="ค้นหาชื่อหนังสือ, ผู้แต่ง หรือ หมวดหมู่..." 
-             class="w-full px-4 py-3 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 shadow">
-    </div>
-  </header>
+  <!-- ================= หน้าสมาชิก (User View) ================= -->
+  <div id="view-user">
+    <header class="bg-indigo-700 text-white py-10 text-center">
+      <h2 class="text-3xl font-extrabold mb-2">ค้นพบความรู้ที่ไม่รู้จบ</h2>
+      <p class="text-indigo-200 mb-6">เลือกยืมหนังสือที่ต้องการได้ทันที ระบบจะตัดสต็อกอัตโนมัติ</p>
+    </header>
 
-  <!-- รายการหนังสือ (Book List Section) -->
-  <main class="max-w-6xl mx-auto p-6">
-    <h3 class="text-2xl font-bold mb-6 text-slate-700">หนังสือแนะนำ</h3>
+    <main class="max-w-6xl mx-auto p-6">
+      <h3 class="text-2xl font-bold mb-6 text-slate-700">หนังสือพร้อมให้ยืม</h3>
+      <div id="book-list" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- รายการหนังสือจะถูกสร้างด้วย JavaScript -->
+      </div>
+    </main>
+  </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      
-      <!-- การ์ดหนังสือเล่มที่ 1 -->
-      <div class="bg-white rounded-xl shadow-md p-4 flex flex-col justify-between border border-slate-100">
+  <!-- ================= หน้าสำหรับแอดมิน (Admin View) ================= -->
+  <div id="view-admin" class="hidden">
+    <main class="max-w-6xl mx-auto p-6">
+      <div class="flex justify-between items-center mb-6">
         <div>
-          <span class="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2.5 py-0.5 rounded">วิทยาศาสตร์/คอมพิวเตอร์</span>
-          <h4 class="text-lg font-bold mt-2">คู่มือพัฒนาเว็บแอปพลิเคชันด้วย JavaScript</h4>
-          <p class="text-sm text-slate-500 mt-1">ผู้แต่ง: สมชาย ใจดี</p>
-          <p class="text-sm text-emerald-600 font-medium mt-2">สถานะ: คงเหลือ 3 เล่ม</p>
+          <h2 class="text-2xl font-bold text-slate-800">🔒 แผงควบคุมบรรณารักษ์ (Admin Dashboard)</h2>
+          <p class="text-slate-500 text-sm">เฉพาะแอดมินเท่านั้นที่จะเห็นประวัติและรายการยืมทั้งหมดในส่วนนี้</p>
         </div>
-        <button class="mt-4 bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition">
-          ยืมหนังสือเล่มนี้
-        </button>
+        <button onclick="clearHistory()" class="text-xs text-rose-600 border border-rose-200 hover:bg-rose-50 px-3 py-1.5 rounded-lg">ล้างประวัติทั้งหมด</button>
       </div>
 
-      <!-- การ์ดหนังสือเล่มที่ 2 -->
-      <div class="bg-white rounded-xl shadow-md p-4 flex flex-col justify-between border border-slate-100">
-        <div>
-          <span class="text-xs bg-amber-100 text-amber-700 font-semibold px-2.5 py-0.5 rounded">วรรณกรรม</span>
-          <h4 class="text-lg font-bold mt-2">การเดินทางของเจ้าชายแห่งดวงดาว</h4>
-          <p class="text-sm text-slate-500 mt-1">ผู้แต่ง: อองตวน เดอ แซงเตกซูเปรี</p>
-          <p class="text-sm text-rose-500 font-medium mt-2">สถานะ: ถูกยืมหมดแล้ว</p>
-        </div>
-        <button class="mt-4 bg-slate-300 text-slate-500 py-2 rounded-lg font-medium cursor-not-allowed" disabled>
-          ถูกยืมหมดแล้ว
-        </button>
+      <!-- ตารางแสดงรายการยืม -->
+      <div class="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead class="bg-slate-100 border-b border-slate-200 text-slate-600">
+            <tr>
+              <th class="p-4">#</th>
+              <th class="p-4">ชื่อผู้ยืม</th>
+              <th class="p-4">หนังสือที่ยืม</th>
+              <th class="p-4">วันที่/เวลา ยืม</th>
+              <th class="p-4">สถานะ</th>
+              <th class="p-4 text-center">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="admin-borrow-list">
+            <!-- รายการยืมจะแสดงตรงนี้ -->
+          </tbody>
+        </table>
       </div>
+    </main>
+  </div>
 
-      <!-- การ์ดหนังสือเล่มที่ 3 -->
-      <div class="bg-white rounded-xl shadow-md p-4 flex flex-col justify-between border border-slate-100">
-        <div>
-          <span class="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2.5 py-0.5 rounded">วิชาการ</span>
-          <h4 class="text-lg font-bold mt-2">คณิตศาสตร์และการประยุกต์ใช้งาน</h4>
-          <p class="text-sm text-slate-500 mt-1">ผู้แต่ง: ดร.วิชาญ เรียนดี</p>
-          <p class="text-sm text-emerald-600 font-medium mt-2">สถานะ: คงเหลือ 1 เล่ม</p>
-        </div>
-        <button class="mt-4 bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition">
-          ยืมหนังสือเล่มนี้
-        </button>
-      </div>
+  <script>
+    // ข้อมูลหนังสือเริ่มต้น
+    let books = [
+      { id: 1, title: "คู่มือพัฒนาเว็บแอปพลิเคชันด้วย JavaScript", author: "สมชาย ใจดี", category: "วิทยาศาสตร์/คอมพิวเตอร์", stock: 3 },
+      { id: 2, title: "การเดินทางของเจ้าชายแห่งดวงดาว", author: "อองตวน เดอ แซงเตกซูเปรี", category: "วรรณกรรม", stock: 1 },
+      { id: 3, title: "คณิตศาสตร์และการประยุกต์ใช้งาน", author: "ดร.วิชาญ เรียนดี", category: "วิชาการ", stock: 2 }
+    ];
 
-    </div>
-  </main>
+    // ดึงประวัติการยืมจากความจำเครื่อง (ถ้ามี)
+    let borrowHistory = JSON.parse(localStorage.getItem('borrowHistory')) || [];
 
-  <!-- ส่วนท้ายเว็บ (Footer) -->
-  <footer class="text-center py-6 text-slate-400 border-t border-slate-200 mt-12 text-sm">
-    © 2026 SmartLibrary - ระบบบริหารจัดการห้องสมุดโรงเรียน
-  </footer>
+    // ฟังก์ชันแสดงรายการหนังสือหน้าสมาชิก
+    function renderBooks() {
+      const container = document.getElementById('book-list');
+      container.innerHTML = '';
 
+      books.forEach(book => {
+        const isAvailable = book.stock > 0;
+        container.innerHTML += `
+          <div class="bg-white rounded-xl shadow-md p-5 flex flex-col justify-between border border-slate-100">
+            <div>
+              <span class="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2.5 py-0.5 rounded">${book.category}</span>
+              <h4 class="text-lg font-bold mt-2 text-slate-800">${book.title}</h4>
+              <p class="text-sm text-slate-500 mt-1">ผู้แต่ง: ${book.author}</p>
+              <p class="text-sm ${isAvailable ? 'text-emerald-600' : 'text-rose-500'} font-medium mt-2">
+                สถานะ: ${isAvailable ? คงเหลือ ${book.stock} เล่ม : 'ถูกยืมหมดแล้ว'}
+              </p>
+            </div>
+            <button 
+              onclick="borrowBook(${book.id})" 
+              class="mt-4 w-full py-2.5 rounded-lg font-medium transition ${isAvailable ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}"
+              ${!isAvailable ? 'disabled' : ''}>
+              ${isAvailable ? '📖 กดยืมหนังสือเล่มนี้' : 'ถูกยืมหมดแล้ว'}
+            </button>
+          </div>
+        `;
+      });
+    }
+
+    // ฟังก์ชันกดยืมหนังสือ
+    function borrowBook(bookId) {
+      const book = books.find(b => b.id === bookId);
+      if (book && book.stock > 0) {
+        const userName = prompt("กรุณากรอกชื่อ-นามสกุล ของผู้ยืม:") || "สมาชิกทั่วไป";
+        
+        // ตัดสต็อก
+        book.stock--;
+
+        // บันทึกประวัติ
+        const record = {
+          id: Date.now(),
+          userName: userName,
+          bookTitle: book.title,
+          date: new Date().toLocaleString('th-TH'),
+          status: 'กำลังยืม'
+        };
+        borrowHistory.push(record);
+        localStorage.setItem('borrowHistory', JSON.stringify(borrowHistory));
+
+        alert(`ยืมหนังสือ "${book.title}" สำเร็จเรียบร้อย!`);
+        renderBooks();
+        renderAdminTable();
+      }
+    }
+
+    // ฟังก์ชันแสดงรายการในหน้า Admin
+    function renderAdminTable() {
+      const tbody = document.getElementById('admin-borrow-list');
+      tbody.innerHTML = '';
+
+      if (borrowHistory.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">ยังไม่มีรายการยืมหนังสือในระบบ</td></tr>`;
+        return;
+      }
+
+      borrowHistory.forEach((item, index) => {
+        tbody.innerHTML += `
+          <tr class="border-b border-slate-100 hover:bg-slate-50">
+            <td class="p-4 font-medium text-slate-500">${index + 1}</td>
+            <td class="p-4 font-semibold text-slate-700">${item.userName}</td>
+            <td class="p-4 text-indigo-600 font-medium">${item.bookTitle}</td>
+            <td class="p-4 text-slate-500 text-xs">${item.date}</td>
+            <td class="p-4">
+              <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${item.status === 'กำลังยืม' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}">
+                ${item.status}
+              </span>
+            </td>
+            <td class="p-4 text-center">
+              ${item.status === 'กำลังยืม' ? <button onclick="returnBook(${item.id})" class="text-xs bg-emerald-600 text-white px-3 py-1 rounded hover:bg-emerald-700">กดรับคืน</button> : '-'}
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    // ฟังก์ชันคืนหนังสือในหน้า Admin
+    function returnBook(recordId) {
+      const record = borrowHistory.find(r => r.id === recordId);
+      if (record) {
+        record.status = 'คืนแล้ว';
+        // คืนสต็อกกลับ
+        const book = books.find(b => b.title === record.bookTitle);
+        if (book) book.stock++;
+
+        localStorage.setItem('borrowHistory', JSON.stringify(borrowHistory));
+        renderBooks();
+        renderAdminTable();
+      }
+    }
+
+    // สลับหน้าจอ สมาชิก <-> Admin
+    function switchTab(tab) {
+      const userView = document.getElementById('view-user');
+      const adminView = document.getElementById('view-admin');
+
+      if (tab === 'admin') {
+        const password = prompt("กรุณากรอกรหัสผ่านบรรณารักษ์ (รหัสทดสอบ: 1234):");
+        if (password === '1234') {
+          userView.classList.add('hidden');
+          adminView.classList.remove('hidden');
+          renderAdminTable();
+        } else if (password !== null) {
+          alert("รหัสผ่านไม่ถูกต้อง!");
+        }
+      } else {
+        userView.classList.remove('hidden');
+        adminView.classList.add('hidden');
+      }
+    }
+
+    function clearHistory() {
+      if (confirm("คุณต้องการล้างประวัติการยืมทั้งหมดใช่หรือไม่?")) {
+        borrowHistory = [];
+        localStorage.removeItem('borrowHistory');
+        renderAdminTable();
+      }
+    }
+
+    // โหลดข้อมูลเมื่อเปิดหน้าเว็บ
+    renderBooks();
+  </script>
 </body>
 </html>
