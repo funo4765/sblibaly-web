@@ -46,7 +46,7 @@
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-6 rounded-xl shadow-md border border-slate-200 mb-6 gap-4">
         <div>
           <h2 class="text-2xl font-bold text-slate-800">🔒 แผงควบคุมบรรณารักษ์</h2>
-          <p class="text-slate-500 text-sm">จัดการหนังสือ ตรวจสอบการยืม-คืน และเพิ่ม/ลบรายการหนังสือ</p>
+          <p class="text-slate-500 text-sm">จัดการหนังสือ ตรวจสอบการยืม-คืน เพิ่ม/แก้ไข/ลบรายการหนังสือ</p>
         </div>
         <button onclick="changePassword()" class="bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs px-4 py-2 rounded-lg transition shadow-sm">
           ⚙️ เปลี่ยนรหัสผ่าน Admin
@@ -60,15 +60,29 @@
           <input type="text" id="new-title" placeholder="ชื่อหนังสือ..." required class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
           <input type="text" id="new-author" placeholder="ชื่อผู้แต่ง..." required class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
           <input type="text" id="new-category" placeholder="หมวดหมู่ (เช่น วิชาการ, วรรณกรรม)..." required class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
-          <input type="url" id="new-image" placeholder="ลิงก์ URL รูปภาพปก (ถ้ามี)" class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
-          <input type="number" id="new-stock" placeholder="จำนวนหนังสือ" min="1" value="1" required class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
-          <button type="submit" class="bg-emerald-600 text-white font-medium text-sm rounded-lg hover:bg-emerald-700 transition py-2">
+          
+          <div class="flex flex-col gap-1">
+            <label class="text-xs text-slate-500">เลือกอัปโหลดไฟล์รูปภาพปก:</label>
+            <input type="file" id="new-image-file" accept="image/*" class="text-xs border rounded-lg p-1 bg-slate-50">
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="text-xs text-slate-500">หรือวาง URL รูปภาพ:</label>
+            <input type="url" id="new-image-url" placeholder="https://..." class="px-3 py-1.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="text-xs text-slate-500">จำนวนสต็อก:</label>
+            <input type="number" id="new-stock" placeholder="จำนวน" min="1" value="1" required class="px-3 py-1.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          </div>
+
+          <button type="submit" class="lg:col-span-3 bg-emerald-600 text-white font-medium text-sm rounded-lg hover:bg-emerald-700 transition py-2.5 mt-2">
             บันทึกเพิ่มหนังสือ
           </button>
         </form>
       </div>
 
-      <!-- ตารางจัดการหนังสือทั้งหมด (ดู/ลบ) -->
+      <!-- ตารางจัดการหนังสือทั้งหมด (ดู/แก้ไข/ลบ) -->
       <div class="mb-10">
         <h3 class="text-xl font-bold text-slate-800 mb-4">📖 รายชื่อหนังสือในระบบทั้งหมด</h3>
         <div class="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200">
@@ -143,6 +157,16 @@
       localStorage.setItem('booksData', JSON.stringify(books));
     }
 
+    // ฟังก์ชันช่วยแปลงไฟล์รูปภาพเป็น Base64
+    function convertFileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+      });
+    }
+
     // ฟังก์ชันเปลี่ยนรหัสผ่าน Admin
     function changePassword() {
       const currentPass = prompt("กรุณากรอกรหัสผ่านปัจจุบัน:");
@@ -161,13 +185,26 @@
     }
 
     // ฟังก์ชันเพิ่มหนังสือใหม่
-    function addNewBook(e) {
+    async function addNewBook(e) {
       e.preventDefault();
       const title = document.getElementById('new-title').value.trim();
       const author = document.getElementById('new-author').value.trim();
       const category = document.getElementById('new-category').value.trim();
-      const image = document.getElementById('new-image').value.trim() || defaultImg;
+      const urlImg = document.getElementById('new-image-url').value.trim();
+      const fileInput = document.getElementById('new-image-file');
       const stock = parseInt(document.getElementById('new-stock').value) || 1;
+
+      let image = defaultImg;
+
+      if (fileInput.files && fileInput.files[0]) {
+        try {
+          image = await convertFileToBase64(fileInput.files[0]);
+        } catch (err) {
+          alert("เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ ใช้รูปภาพเริ่มต้นแทน");
+        }
+      } else if (urlImg) {
+        image = urlImg;
+      }
 
       if (title && author && category) {
         const newBook = {
@@ -184,18 +221,53 @@
         renderBooks();
         renderAdminBookTable();
 
-        // ล้างค่าในช่องกรอก
+        // ล้างค่าฟอร์ม
         document.getElementById('new-title').value = '';
         document.getElementById('new-author').value = '';
         document.getElementById('new-category').value = '';
-        document.getElementById('new-image').value = '';
+        document.getElementById('new-image-url').value = '';
+        document.getElementById('new-image-file').value = '';
         document.getElementById('new-stock').value = '1';
 
         alert(`เพิ่มหนังสือ "${title}" เรียบร้อยแล้ว!`);
       }
     }
 
-    // ฟังก์ชันลบหนังสือออกจากระบบ
+    // ฟังก์ชันแก้ไขหนังสือ
+    function editBook(bookId) {
+      const book = books.find(b => b.id === bookId);
+      if (!book) return;
+
+      const newTitle = prompt("แก้ไขชื่อหนังสือ:", book.title);
+      if (newTitle === null) return; // กด Cancel
+
+      const newAuthor = prompt("แก้ไขชื่อผู้แต่ง:", book.author);
+      if (newAuthor === null) return;
+
+      const newCategory = prompt("แก้ไขหมวดหมู่:", book.category);
+      if (newCategory === null) return;
+
+      const newStockStr = prompt("แก้ไขจำนวนสต็อกคงเหลือ:", book.stock);
+      if (newStockStr === null) return;
+      const newStock = parseInt(newStockStr) || 0;
+
+      const newImageUrl = prompt("แก้ไข URL รูปภาพปก (เว้นว่างไว้เพื่อใช้รูปเดิม):", book.image.startsWith('data:') ? '' : book.image);
+      
+      book.title = newTitle.trim() || book.title;
+      book.author = newAuthor.trim() || book.author;
+      book.category = newCategory.trim() || book.category;
+      book.stock = newStock;
+      if (newImageUrl && newImageUrl.trim() !== '') {
+        book.image = newImageUrl.trim();
+      }
+
+      saveBooks();
+      renderBooks();
+      renderAdminBookTable();
+      alert("อัปเดตข้อมูลหนังสือเรียบร้อยแล้ว!");
+    }
+
+    // ฟังก์ชันลบหนังสือ
     function deleteBook(bookId) {
       const book = books.find(b => b.id === bookId);
       if (book) {
@@ -272,9 +344,14 @@
             <td class="p-4"><span class="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-md text-xs font-medium">${book.category}</span></td>
             <td class="p-4 font-bold ${book.stock > 0 ? 'text-emerald-600' : 'text-rose-500'}">${book.stock} เล่ม</td>
             <td class="p-4 text-center">
-              <button onclick="deleteBook(${book.id})" class="bg-rose-500 hover:bg-rose-600 text-white text-xs px-3 py-1.5 rounded-lg transition shadow-sm">
-                🗑️ ลบ
-              </button>
+              <div class="flex justify-center gap-2">
+                <button onclick="editBook(${book.id})" class="bg-amber-500 hover:bg-amber-600 text-white text-xs px-2.5 py-1.5 rounded-lg transition shadow-sm">
+                  ✏️ แก้ไข
+                </button>
+                <button onclick="deleteBook(${book.id})" class="bg-rose-500 hover:bg-rose-600 text-white text-xs px-2.5 py-1.5 rounded-lg transition shadow-sm">
+                  🗑️ ลบ
+                </button>
+              </div>
             </td>
           </tr>
         `;
