@@ -41,13 +41,30 @@
   <!-- ================= หน้าสำหรับแอดมิน (Admin View) ================= -->
   <div id="view-admin" class="hidden flex-grow">
     <main class="max-w-6xl mx-auto p-6">
+      
+      <!-- ฟอร์มเพิ่มหนังสือใหม่ -->
+      <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200 mb-8">
+        <h3 class="text-lg font-bold text-slate-800 mb-4">➕ เพิ่มหนังสือเล่มใหม่เข้าห้องสมุด</h3>
+        <form onsubmit="addNewBook(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <input type="text" id="new-title" placeholder="ชื่อหนังสือ..." required class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <input type="text" id="new-author" placeholder="ชื่อผู้แต่ง..." required class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <input type="text" id="new-category" placeholder="หมวดหมู่ (เช่น วิชาการ, วรรณกรรม)..." required class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <div class="flex gap-2">
+            <input type="number" id="new-stock" placeholder="จำนวน" min="1" value="1" required class="w-24 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+            <button type="submit" class="flex-grow bg-emerald-600 text-white font-medium text-sm rounded-lg hover:bg-emerald-700 transition">
+              บันทึกเพิ่มหนังสือ
+            </button>
+          </div>
+        </form>
+      </div>
+
       <div class="flex justify-between items-center mb-6">
         <div>
-          <h2 class="text-2xl font-bold text-slate-800">🔒 แผงควบคุมบรรณารักษ์ (Admin Dashboard)</h2>
-          <p class="text-slate-500 text-sm">เฉพาะแอดมินเท่านั้นที่จะเห็นประวัติและรายการยืมทั้งหมด</p>
+          <h2 class="text-2xl font-bold text-slate-800">🔒 ประวัติการยืม-คืนหนังสือ</h2>
+          <p class="text-slate-500 text-sm">รายการยืมหนังสือทั้งหมดในระบบ</p>
         </div>
         <button onclick="clearHistory()" class="text-xs text-rose-600 border border-rose-200 hover:bg-rose-50 px-3 py-1.5 rounded-lg">
-          ล้างประวัติทั้งหมด
+          ล้างประวัติการยืม
         </button>
       </div>
 
@@ -77,15 +94,50 @@
   </footer>
 
   <script>
-    // ข้อมูลหนังสือเริ่มต้น
-    let books = [
+    // ข้อมูลหนังสือเริ่มต้น (ดึงจาก LocalStorage หรือใช้ค่าเริ่มต้น)
+    let defaultBooks = [
       { id: 1, title: "คู่มือพัฒนาเว็บแอปพลิเคชันด้วย JavaScript", author: "สมชาย ใจดี", category: "วิทยาศาสตร์/คอมพิวเตอร์", stock: 3 },
       { id: 2, title: "การเดินทางของเจ้าชายแห่งดวงดาว", author: "อองตวน เดอ แซงเตกซูเปรี", category: "วรรณกรรม", stock: 1 },
       { id: 3, title: "คณิตศาสตร์และการประยุกต์ใช้งาน", author: "ดร.วิชาญ เรียนดี", category: "วิชาการ", stock: 2 }
     ];
 
-    // ดึงประวัติการยืมจาก LocalStorage
+    let books = JSON.parse(localStorage.getItem('booksData')) || defaultBooks;
     let borrowHistory = JSON.parse(localStorage.getItem('borrowHistory')) || [];
+
+    function saveBooks() {
+      localStorage.setItem('booksData', JSON.stringify(books));
+    }
+
+    // ฟังก์ชันเพิ่มหนังสือใหม่
+    function addNewBook(e) {
+      e.preventDefault();
+      const title = document.getElementById('new-title').value.trim();
+      const author = document.getElementById('new-author').value.trim();
+      const category = document.getElementById('new-category').value.trim();
+      const stock = parseInt(document.getElementById('new-stock').value) || 1;
+
+      if (title && author && category) {
+        const newBook = {
+          id: Date.now(),
+          title: title,
+          author: author,
+          category: category,
+          stock: stock
+        };
+
+        books.push(newBook);
+        saveBooks();
+        renderBooks();
+
+        // ล้างค่าในช่องกรอก
+        document.getElementById('new-title').value = '';
+        document.getElementById('new-author').value = '';
+        document.getElementById('new-category').value = '';
+        document.getElementById('new-stock').value = '1';
+
+        alert(`เพิ่มหนังสือ "${title}" เรียบร้อยแล้ว!`);
+      }
+    }
 
     // ฟังก์ชันแสดงรายการหนังสือ
     function renderBooks() {
@@ -128,6 +180,7 @@
         }
 
         book.stock--;
+        saveBooks();
 
         const record = {
           id: Date.now(),
@@ -184,7 +237,10 @@
       if (record) {
         record.status = 'คืนแล้ว';
         const book = books.find(b => b.title === record.bookTitle);
-        if (book) book.stock++;
+        if (book) {
+          book.stock++;
+          saveBooks();
+        }
 
         localStorage.setItem('borrowHistory', JSON.stringify(borrowHistory));
         renderBooks();
@@ -228,7 +284,6 @@
       }
     }
 
-    // เริ่มต้นแสดงผลหน้าสมาชิก
     renderBooks();
   </script>
 </body>
