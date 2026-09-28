@@ -170,7 +170,7 @@
               </span>
             </td>
             <td class="p-4 text-center">
-              ${isBorrowing ? <button onclick="returnBook(${item.id})" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded hover:bg-emerald-700 shadow-sm transition">กดรับคืน</button> : '<span class="text-slate-400">-</span>'}
+              ${isBorrowing ? `<button onclick="returnBook(${item.id})" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded hover:bg-emerald-700 shadow-sm transition">กดรับคืน</button>` : '<span class="text-slate-400">-</span>'}
             </td>
           </tr>
         `;
