@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SmartLibrary - ระบบยืม-คืนหนังสือ</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
 
@@ -27,13 +31,13 @@
   <div id="view-user" class="flex-grow">
     <header class="bg-indigo-700 text-white py-10 text-center shadow-inner">
       <h2 class="text-3xl font-extrabold mb-2">ค้นพบความรู้ที่ไม่รู้จบ</h2>
-      <p class="text-indigo-200">เลือกยืมหนังสือที่ต้องการได้ทันที ระบบจะตัดสต็อกอัตโนมัติ</p>
+      <p class="text-indigo-200">เลือกยืมหนังสือที่ต้องการได้ทันที ระบบจะตัดสต็อกอัตโนมัติแบบ Realtime</p>
     </header>
 
     <main class="max-w-6xl mx-auto p-6">
       <h3 class="text-2xl font-bold mb-6 text-slate-700">รายการหนังสือทั้งหมด</h3>
       <div id="book-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        <!-- รายการหนังสือแสดงตรงนี้ -->
+        <div class="col-span-full text-center py-10 text-slate-400">กำลังโหลดข้อมูลหนังสือ...</div>
       </div>
     </main>
   </div>
@@ -42,11 +46,10 @@
   <div id="view-admin" class="hidden flex-grow">
     <main class="max-w-6xl mx-auto p-6">
       
-      <!-- หัวข้อ + ปุ่มเปลี่ยนรหัสผ่าน -->
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-6 rounded-xl shadow-md border border-slate-200 mb-6 gap-4">
         <div>
           <h2 class="text-2xl font-bold text-slate-800">🔒 แผงควบคุมบรรณารักษ์</h2>
-          <p class="text-slate-500 text-sm">จัดการหนังสือ ตรวจสอบการยืม-คืน เพิ่ม/แก้ไข/ลบรายการหนังสือ</p>
+          <p class="text-slate-500 text-sm">จัดการหนังสือ ตรวจสอบการยืม-คืน เพิ่ม/แก้ไข/ลบรายการหนังสือ (เชื่อมต่อ Firebase)</p>
         </div>
         <button onclick="changePassword()" class="bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs px-4 py-2 rounded-lg transition shadow-sm">
           ⚙️ เปลี่ยนรหัสผ่าน Admin
@@ -59,10 +62,10 @@
         <form onsubmit="addNewBook(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <input type="text" id="new-title" placeholder="ชื่อหนังสือ..." required class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
           <input type="text" id="new-author" placeholder="ชื่อผู้แต่ง..." required class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
-          <input type="text" id="new-category" placeholder="หมวดหมู่ (เช่น วิชาการ, วรรณกรรม)..." required class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <input type="text" id="new-category" placeholder="หมวดหมู่..." required class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
           
           <div class="flex flex-col gap-1">
-            <label class="text-xs text-slate-500">เลือกอัปโหลดไฟล์รูปภาพปก:</label>
+            <label class="text-xs text-slate-500">เลือกอัปโหลดรูปภาพปก:</label>
             <input type="file" id="new-image-file" accept="image/*" class="text-xs border rounded-lg p-1 bg-slate-50">
           </div>
 
@@ -76,13 +79,13 @@
             <input type="number" id="new-stock" placeholder="จำนวน" min="1" value="1" required class="px-3 py-1.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
           </div>
 
-          <button type="submit" class="lg:col-span-3 bg-emerald-600 text-white font-medium text-sm rounded-lg hover:bg-emerald-700 transition py-2.5 mt-2">
+          <button type="submit" id="btn-submit-book" class="lg:col-span-3 bg-emerald-600 text-white font-medium text-sm rounded-lg hover:bg-emerald-700 transition py-2.5 mt-2">
             บันทึกเพิ่มหนังสือ
           </button>
         </form>
       </div>
 
-      <!-- ตารางจัดการหนังสือทั้งหมด (ดู/แก้ไข/ลบ) -->
+      <!-- ตารางจัดการหนังสือทั้งหมด -->
       <div class="mb-10">
         <h3 class="text-xl font-bold text-slate-800 mb-4">📖 รายชื่อหนังสือในระบบทั้งหมด</h3>
         <div class="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200">
@@ -98,7 +101,7 @@
               </tr>
             </thead>
             <tbody id="admin-book-manage-list">
-              <!-- รายชื่อหนังสือจะแสดงตรงนี้ -->
+              <tr><td colspan="6" class="p-6 text-center text-slate-400">กำลังโหลด...</td></tr>
             </tbody>
           </table>
         </div>
@@ -107,12 +110,8 @@
       <!-- ประวัติการยืม-คืน -->
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-xl font-bold text-slate-800">📋 ประวัติการยืม-คืน</h3>
-        <button onclick="clearHistory()" class="text-xs text-rose-600 border border-rose-200 hover:bg-rose-50 px-3 py-1.5 rounded-lg">
-          ล้างประวัติการยืม
-        </button>
       </div>
 
-      <!-- ตารางแสดงรายการยืม -->
       <div class="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200">
         <table class="w-full text-left border-collapse text-sm">
           <thead class="bg-slate-100 border-b border-slate-200 text-slate-600">
@@ -126,7 +125,7 @@
             </tr>
           </thead>
           <tbody id="admin-borrow-list">
-            <!-- รายการยืมจะแสดงตรงนี้ -->
+            <tr><td colspan="6" class="p-6 text-center text-slate-400">กำลังโหลด...</td></tr>
           </tbody>
         </table>
       </div>
@@ -139,25 +138,49 @@
   </footer>
 
   <script>
-    // รูปภาพปกหนังสือเริ่มต้น
+    // ตั้งค่า Firebase Config สำหรับ sblibraly
+    const firebaseConfig = {
+      apiKey: "AIzaSyA8YDvPHagHY766eBqMGMlQFXo8edvDjIw",
+      authDomain: "sblibraly.firebaseapp.com",
+      projectId: "sblibraly",
+      storageBucket: "sblibraly.firebasestorage.app",
+      messagingSenderId: "893056198233",
+      appId: "1:893056198233:web:5eb3d582c06447c6ab7348",
+      measurementId: "G-W9N07HGBMZ"
+    };
+
+    // เริ่มต้นเชื่อมต่อ Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
     const defaultImg = "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=400&q=80";
-
-    // ข้อมูลหนังสือเริ่มต้น
-    let defaultBooks = [
-      { id: 1, title: "คู่มือพัฒนาเว็บด้วย JavaScript", author: "สมชาย ใจดี", category: "คอมพิวเตอร์", stock: 3, image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=400&q=80" },
-      { id: 2, title: "เจ้าชายแห่งดวงดาว", author: "อองตวน เดอ แซงเตกซูเปรี", category: "วรรณกรรม", stock: 1, image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=400&q=80" },
-      { id: 3, title: "คณิตศาสตร์และการประยุกต์", author: "ดร.วิชาญ เรียนดี", category: "วิชาการ", stock: 2, image: "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=400&q=80" }
-    ];
-
-    let books = JSON.parse(localStorage.getItem('booksData')) || defaultBooks;
-    let borrowHistory = JSON.parse(localStorage.getItem('borrowHistory')) || [];
     let adminPassword = localStorage.getItem('adminPassword') || '1234';
+    let booksData = [];
+    let borrowHistoryData = [];
 
-    function saveBooks() {
-      localStorage.setItem('booksData', JSON.stringify(books));
+    // ดึงข้อมูล Realtime จาก Firebase Firestore
+    function listenToData() {
+      // ดึงรายการหนังสือ
+      db.collection("books").onSnapshot((snapshot) => {
+        booksData = [];
+        snapshot.forEach((doc) => {
+          booksData.push({ id: doc.id, ...doc.data() });
+        });
+        renderBooks();
+        renderAdminBookTable();
+      });
+
+      // ดึงประวัติการยืม
+      db.collection("borrows").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+        borrowHistoryData = [];
+        snapshot.forEach((doc) => {
+          borrowHistoryData.push({ id: doc.id, ...doc.data() });
+        });
+        renderAdminTable();
+      });
     }
 
-    // ฟังก์ชันช่วยแปลงไฟล์รูปภาพเป็น Base64
+    // แปลงรูปเป็น Base64
     function convertFileToBase64(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -167,26 +190,13 @@
       });
     }
 
-    // ฟังก์ชันเปลี่ยนรหัสผ่าน Admin
-    function changePassword() {
-      const currentPass = prompt("กรุณากรอกรหัสผ่านปัจจุบัน:");
-      if (currentPass === adminPassword) {
-        const newPass = prompt("กรุณากรอกรหัสผ่านใหม่ที่ต้องการ:");
-        if (newPass && newPass.trim() !== "") {
-          adminPassword = newPass.trim();
-          localStorage.setItem('adminPassword', adminPassword);
-          alert("เปลี่ยนรหัสผ่านเรียบร้อยแล้ว!");
-        } else {
-          alert("รหัสผ่านต้องไม่เป็นค่าว่าง");
-        }
-      } else if (currentPass !== null) {
-        alert("รหัสผ่านปัจจุบันไม่ถูกต้อง!");
-      }
-    }
-
-    // ฟังก์ชันเพิ่มหนังสือใหม่
+    // เพิ่มหนังสือใหม่เข้า Firebase
     async function addNewBook(e) {
       e.preventDefault();
+      const btn = document.getElementById('btn-submit-book');
+      btn.disabled = true;
+      btn.innerText = "กำลังบันทึกข้อมูล...";
+
       const title = document.getElementById('new-title').value.trim();
       const author = document.getElementById('new-author').value.trim();
       const category = document.getElementById('new-category').value.trim();
@@ -200,28 +210,22 @@
         try {
           image = await convertFileToBase64(fileInput.files[0]);
         } catch (err) {
-          alert("เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ ใช้รูปภาพเริ่มต้นแทน");
+          alert("เกิดข้อผิดพลาดในการโหลดรูป ใช้รูปเริ่มต้นแทน");
         }
       } else if (urlImg) {
         image = urlImg;
       }
 
-      if (title && author && category) {
-        const newBook = {
-          id: Date.now(),
+      try {
+        await db.collection("books").add({
           title: title,
           author: author,
           category: category,
           image: image,
-          stock: stock
-        };
+          stock: stock,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
 
-        books.push(newBook);
-        saveBooks();
-        renderBooks();
-        renderAdminBookTable();
-
-        // ล้างค่าฟอร์ม
         document.getElementById('new-title').value = '';
         document.getElementById('new-author').value = '';
         document.getElementById('new-category').value = '';
@@ -230,16 +234,21 @@
         document.getElementById('new-stock').value = '1';
 
         alert(`เพิ่มหนังสือ "${title}" เรียบร้อยแล้ว!`);
+      } catch (error) {
+        alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล: " + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "บันทึกเพิ่มหนังสือ";
       }
     }
 
-    // ฟังก์ชันแก้ไขหนังสือ
-    function editBook(bookId) {
-      const book = books.find(b => b.id === bookId);
+    // แก้ไขหนังสือ
+    async function editBook(bookId) {
+      const book = booksData.find(b => b.id === bookId);
       if (!book) return;
 
       const newTitle = prompt("แก้ไขชื่อหนังสือ:", book.title);
-      if (newTitle === null) return; // กด Cancel
+      if (newTitle === null) return;
 
       const newAuthor = prompt("แก้ไขชื่อผู้แต่ง:", book.author);
       if (newAuthor === null) return;
@@ -252,42 +261,83 @@
       const newStock = parseInt(newStockStr) || 0;
 
       const newImageUrl = prompt("แก้ไข URL รูปภาพปก (เว้นว่างไว้เพื่อใช้รูปเดิม):", book.image.startsWith('data:') ? '' : book.image);
-      
-      book.title = newTitle.trim() || book.title;
-      book.author = newAuthor.trim() || book.author;
-      book.category = newCategory.trim() || book.category;
-      book.stock = newStock;
+
+      let updatedData = {
+        title: newTitle.trim() || book.title,
+        author: newAuthor.trim() || book.author,
+        category: newCategory.trim() || book.category,
+        stock: newStock
+      };
+
       if (newImageUrl && newImageUrl.trim() !== '') {
-        book.image = newImageUrl.trim();
+        updatedData.image = newImageUrl.trim();
       }
 
-      saveBooks();
-      renderBooks();
-      renderAdminBookTable();
-      alert("อัปเดตข้อมูลหนังสือเรียบร้อยแล้ว!");
+      await db.collection("books").doc(bookId).update(updatedData);
+      alert("อัปเดตข้อมูลเรียบร้อยแล้ว!");
     }
 
-    // ฟังก์ชันลบหนังสือ
-    function deleteBook(bookId) {
-      const book = books.find(b => b.id === bookId);
+    // ลบหนังสือ
+    async function deleteBook(bookId) {
+      const book = booksData.find(b => b.id === bookId);
+      if (book && confirm(`คุณต้องการลบหนังสือ "${book.title}" ใช่หรือไม่?`)) {
+        await db.collection("books").doc(bookId).delete();
+        alert("ลบหนังสือเรียบร้อยแล้ว!");
+      }
+    }
+
+    // กดยืมหนังสือ
+    async function borrowBook(bookId) {
+      const book = booksData.find(b => b.id === bookId);
+      if (book && book.stock > 0) {
+        const userName = prompt("กรุณากรอกชื่อ-นามสกุล ของผู้ยืม:");
+        if (!userName || userName.trim() === '') return;
+
+        // ตัดสต็อกหนังสือ
+        await db.collection("books").doc(bookId).update({
+          stock: book.stock - 1
+        });
+
+        // บันทึกประวัติ
+        await db.collection("borrows").add({
+          userName: userName.trim(),
+          bookId: bookId,
+          bookTitle: book.title,
+          date: new Date().toLocaleString('th-TH'),
+          status: 'กำลังยืม',
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        alert('ยืมหนังสือ "' + book.title + '" สำเร็จเรียบร้อย!');
+      }
+    }
+
+    // กดรับคืนหนังสือ
+    async function returnBook(borrowId, bookId) {
+      await db.collection("borrows").doc(borrowId).update({
+        status: 'คืนแล้ว'
+      });
+
+      const book = booksData.find(b => b.id === bookId);
       if (book) {
-        if (confirm(`คุณต้องการลบหนังสือ "${book.title}" ออกจากระบบใช่หรือไม่?`)) {
-          books = books.filter(b => b.id !== bookId);
-          saveBooks();
-          renderBooks();
-          renderAdminBookTable();
-          alert("ลบหนังสือเรียบร้อยแล้ว!");
-        }
+        await db.collection("books").doc(bookId).update({
+          stock: book.stock + 1
+        });
       }
+
+      alert("ทำรายการรับคืนเรียบร้อยแล้ว!");
     }
 
-    // ฟังก์ชันแสดงรายการหนังสือฝั่งสมาชิก
+    // แสดงรายการฝั่งสมาชิก
     function renderBooks() {
       const container = document.getElementById('book-list');
-      if (!container) return;
-      
+      if (booksData.length === 0) {
+        container.innerHTML = `<div class="col-span-full text-center py-10 text-slate-400">ยังไม่มีหนังสือในระบบ</div>`;
+        return;
+      }
+
       let html = '';
-      books.forEach(book => {
+      booksData.forEach(book => {
         const isAvailable = book.stock > 0;
         const imgUrl = book.image || defaultImg;
         html += `
@@ -309,7 +359,7 @@
             </div>
             <div class="p-4 pt-0">
               <button 
-                onclick="borrowBook(${book.id})" 
+                onclick="borrowBook('${book.id}')" 
                 class="w-full py-2 rounded-lg text-sm font-medium transition ${isAvailable ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}"
                 ${!isAvailable ? 'disabled' : ''}>
                 ${isAvailable ? '📖 กดยืมหนังสือ' : 'ถูกยืมหมดแล้ว'}
@@ -321,18 +371,16 @@
       container.innerHTML = html;
     }
 
-    // ฟังก์ชันแสดงตารางจัดการหนังสือฝั่ง Admin
+    // แสดงรายการตารางฝั่ง Admin
     function renderAdminBookTable() {
       const tbody = document.getElementById('admin-book-manage-list');
-      if (!tbody) return;
-
-      if (books.length === 0) {
+      if (booksData.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">ยังไม่มีรายการหนังสือในระบบ</td></tr>`;
         return;
       }
 
       let html = '';
-      books.forEach(book => {
+      booksData.forEach(book => {
         const imgUrl = book.image || defaultImg;
         html += `
           <tr class="border-b border-slate-100 hover:bg-slate-50">
@@ -345,10 +393,10 @@
             <td class="p-4 font-bold ${book.stock > 0 ? 'text-emerald-600' : 'text-rose-500'}">${book.stock} เล่ม</td>
             <td class="p-4 text-center">
               <div class="flex justify-center gap-2">
-                <button onclick="editBook(${book.id})" class="bg-amber-500 hover:bg-amber-600 text-white text-xs px-2.5 py-1.5 rounded-lg transition shadow-sm">
+                <button onclick="editBook('${book.id}')" class="bg-amber-500 hover:bg-amber-600 text-white text-xs px-2.5 py-1.5 rounded-lg transition shadow-sm">
                   ✏️ แก้ไข
                 </button>
-                <button onclick="deleteBook(${book.id})" class="bg-rose-500 hover:bg-rose-600 text-white text-xs px-2.5 py-1.5 rounded-lg transition shadow-sm">
+                <button onclick="deleteBook('${book.id}')" class="bg-rose-500 hover:bg-rose-600 text-white text-xs px-2.5 py-1.5 rounded-lg transition shadow-sm">
                   🗑️ ลบ
                 </button>
               </div>
@@ -359,47 +407,16 @@
       tbody.innerHTML = html;
     }
 
-    // ฟังก์ชันกดยืมหนังสือ
-    function borrowBook(bookId) {
-      const book = books.find(b => b.id === bookId);
-      if (book && book.stock > 0) {
-        const userName = prompt("กรุณากรอกชื่อ-นามสกุล ของผู้ยืม:");
-        if (!userName || userName.trim() === '') {
-          alert("การยืมถูกยกเลิก เนื่องจากไม่ได้ระบุชื่อ");
-          return;
-        }
-
-        book.stock--;
-        saveBooks();
-
-        const record = {
-          id: Date.now(),
-          userName: userName.trim(),
-          bookTitle: book.title,
-          date: new Date().toLocaleString('th-TH'),
-          status: 'กำลังยืม'
-        };
-
-        borrowHistory.push(record);
-        localStorage.setItem('borrowHistory', JSON.stringify(borrowHistory));
-
-        alert('ยืมหนังสือ "' + book.title + '" สำเร็จเรียบร้อย!');
-        renderBooks();
-      }
-    }
-
-    // ฟังก์ชันแสดงตารางประวัติยืม-คืน Admin
+    // แสดงรายการประวัติยืมฝั่ง Admin
     function renderAdminTable() {
       const tbody = document.getElementById('admin-borrow-list');
-      if (!tbody) return;
-
-      if (borrowHistory.length === 0) {
+      if (borrowHistoryData.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">ยังไม่มีรายการยืมหนังสือในระบบ</td></tr>`;
         return;
       }
 
       let html = '';
-      borrowHistory.forEach((item, index) => {
+      borrowHistoryData.forEach((item, index) => {
         const isBorrowing = item.status === 'กำลังยืม';
         html += `
           <tr class="border-b border-slate-100 hover:bg-slate-50">
@@ -413,7 +430,7 @@
               </span>
             </td>
             <td class="p-4 text-center">
-              ${isBorrowing ? `<button onclick="returnBook(${item.id})" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded hover:bg-emerald-700 shadow-sm transition">กดรับคืน</button>` : '<span class="text-slate-400">-</span>'}
+              ${isBorrowing ? `<button onclick="returnBook('${item.id}', '${item.bookId}')" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded hover:bg-emerald-700 shadow-sm transition">กดรับคืน</button>` : '<span class="text-slate-400">-</span>'}
             </td>
           </tr>
         `;
@@ -421,25 +438,22 @@
       tbody.innerHTML = html;
     }
 
-    // ฟังก์ชันคืนหนังสือ
-    function returnBook(recordId) {
-      const record = borrowHistory.find(r => r.id === recordId);
-      if (record) {
-        record.status = 'คืนแล้ว';
-        const book = books.find(b => b.title === record.bookTitle);
-        if (book) {
-          book.stock++;
-          saveBooks();
+    // เปลี่ยนรหัสผ่าน Admin
+    function changePassword() {
+      const currentPass = prompt("กรุณากรอกรหัสผ่านปัจจุบัน:");
+      if (currentPass === adminPassword) {
+        const newPass = prompt("กรุณากรอกรหัสผ่านใหม่ที่ต้องการ:");
+        if (newPass && newPass.trim() !== "") {
+          adminPassword = newPass.trim();
+          localStorage.setItem('adminPassword', adminPassword);
+          alert("เปลี่ยนรหัสผ่านเรียบร้อยแล้ว!");
         }
-
-        localStorage.setItem('borrowHistory', JSON.stringify(borrowHistory));
-        renderBooks();
-        renderAdminTable();
-        renderAdminBookTable();
+      } else if (currentPass !== null) {
+        alert("รหัสผ่านไม่ถูกต้อง!");
       }
     }
 
-    // สลับหน้าระหว่าง สมาชิก <-> Admin
+    // สลับหน้าจอ
     function showTab(tabName) {
       const userView = document.getElementById('view-user');
       const adminView = document.getElementById('view-admin');
@@ -453,8 +467,6 @@
           adminView.classList.remove('hidden');
           btnAdmin.classList.add('bg-indigo-800');
           btnUser.classList.remove('bg-indigo-800');
-          renderAdminBookTable();
-          renderAdminTable();
         } else if (password !== null) {
           alert("รหัสผ่านไม่ถูกต้อง!");
         }
@@ -463,20 +475,11 @@
         adminView.classList.add('hidden');
         btnUser.classList.add('bg-indigo-800');
         btnAdmin.classList.remove('bg-indigo-800');
-        renderBooks();
       }
     }
 
-    // ล้างประวัติ
-    function clearHistory() {
-      if (confirm("คุณต้องการล้างประวัติการยืมทั้งหมดใช่หรือไม่?")) {
-        borrowHistory = [];
-        localStorage.removeItem('borrowHistory');
-        renderAdminTable();
-      }
-    }
-
-    renderBooks();
+    // เริ่มทำงานเมื่อเปิดหน้าเว็บ
+    listenToData();
   </script>
 </body>
 </html>
