@@ -175,32 +175,25 @@
       });
     }
 
-    // ฟังก์ชันย่อขนาดรูปภาพอัตโนมัติก่อนส่ง
-    function compressAndConvertImage(file) {
-      return new Promise((resolve, reject) => {
+    // ฟังก์ชันย่อภาพรวดเร็ว ป้องกัน Safari ค้าง
+    function processImageFile(file) {
+      return new Promise((resolve) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
-        reader.onload = (event) => {
+        reader.onload = (e) => {
           const img = new Image();
-          img.src = event.target.result;
+          img.src = e.target.result;
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            const maxWidth = 300; // จำกัดความกว้างไม่เกิน 300px
-            const scaleSize = maxWidth / img.width;
-            
-            canvas.width = (img.width > maxWidth) ? maxWidth : img.width;
-            canvas.height = (img.width > maxWidth) ? img.height * scaleSize : img.height;
-
-            const ctx = canvas.getContext('canvas');
-            const context = canvas.getContext('2d');
-            context.drawImage(img, 0, 0, canvas.width, canvas.height);
-            
-            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7); // บีบอัดคุณภาพลงเหลือ 70%
-            resolve(compressedBase64);
+            canvas.width = 200;
+            canvas.height = 280;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, 200, 280);
+            resolve(canvas.toDataURL('image/jpeg', 0.5));
           };
-          img.onerror = (err) => reject(err);
+          img.onerror = () => resolve(defaultImg);
         };
-        reader.onerror = (err) => reject(err);
+        reader.onerror = () => resolve(defaultImg);
       });
     }
 
@@ -208,7 +201,7 @@
       e.preventDefault();
       const btn = document.getElementById('btn-submit-book');
       btn.disabled = true;
-      btn.innerText = "กำลังย่อขนาดรูปและบันทึกข้อมูล...";
+      btn.innerText = "กำลังบันทึก...";
 
       const title = document.getElementById('new-title').value.trim();
       const author = document.getElementById('new-author').value.trim();
@@ -219,14 +212,10 @@
 
       let image = defaultImg;
 
-      if (fileInput.files && fileInput.files[0]) {
-        try {
-          image = await compressAndConvertImage(fileInput.files[0]);
-        } catch (err) {
-          alert("เกิดข้อผิดพลาดในการโหลดรูป ใช้รูปเริ่มต้นแทน");
-        }
-      } else if (urlImg) {
+      if (urlImg) {
         image = urlImg;
+      } else if (fileInput.files && fileInput.files[0]) {
+        image = await processImageFile(fileInput.files[0]);
       }
 
       try {
