@@ -46,14 +46,14 @@
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-6 rounded-xl shadow-md border border-slate-200 mb-6 gap-4">
         <div>
           <h2 class="text-2xl font-bold text-slate-800">🔒 แผงควบคุมบรรณารักษ์</h2>
-          <p class="text-slate-500 text-sm">จัดการหนังสือและตรวจสอบการยืม-คืน</p>
+          <p class="text-slate-500 text-sm">จัดการหนังสือ ตรวจสอบการยืม-คืน และเพิ่ม/ลบรายการหนังสือ</p>
         </div>
         <button onclick="changePassword()" class="bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs px-4 py-2 rounded-lg transition shadow-sm">
           ⚙️ เปลี่ยนรหัสผ่าน Admin
         </button>
       </div>
 
-      <!-- ฟอร์มเพิ่มหนังสือใหม่ (พร้อมช่องใส่รูป) -->
+      <!-- ฟอร์มเพิ่มหนังสือใหม่ -->
       <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200 mb-8">
         <h3 class="text-lg font-bold text-slate-800 mb-4">➕ เพิ่มหนังสือเล่มใหม่</h3>
         <form onsubmit="addNewBook(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -68,6 +68,29 @@
         </form>
       </div>
 
+      <!-- ตารางจัดการหนังสือทั้งหมด (ดู/ลบ) -->
+      <div class="mb-10">
+        <h3 class="text-xl font-bold text-slate-800 mb-4">📖 รายชื่อหนังสือในระบบทั้งหมด</h3>
+        <div class="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead class="bg-slate-100 border-b border-slate-200 text-slate-600">
+              <tr>
+                <th class="p-4">รูปปก</th>
+                <th class="p-4">ชื่อหนังสือ</th>
+                <th class="p-4">ผู้แต่ง</th>
+                <th class="p-4">หมวดหมู่</th>
+                <th class="p-4">จำนวนคงเหลือ</th>
+                <th class="p-4 text-center">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="admin-book-manage-list">
+              <!-- รายชื่อหนังสือจะแสดงตรงนี้ -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ประวัติการยืม-คืน -->
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-xl font-bold text-slate-800">📋 ประวัติการยืม-คืน</h3>
         <button onclick="clearHistory()" class="text-xs text-rose-600 border border-rose-200 hover:bg-rose-50 px-3 py-1.5 rounded-lg">
@@ -93,6 +116,7 @@
           </tbody>
         </table>
       </div>
+
     </main>
   </div>
 
@@ -158,6 +182,7 @@
         books.push(newBook);
         saveBooks();
         renderBooks();
+        renderAdminBookTable();
 
         // ล้างค่าในช่องกรอก
         document.getElementById('new-title').value = '';
@@ -170,7 +195,21 @@
       }
     }
 
-    // ฟังก์ชันแสดงรายการหนังสือพร้อมรูปภาพ
+    // ฟังก์ชันลบหนังสือออกจากระบบ
+    function deleteBook(bookId) {
+      const book = books.find(b => b.id === bookId);
+      if (book) {
+        if (confirm(`คุณต้องการลบหนังสือ "${book.title}" ออกจากระบบใช่หรือไม่?`)) {
+          books = books.filter(b => b.id !== bookId);
+          saveBooks();
+          renderBooks();
+          renderAdminBookTable();
+          alert("ลบหนังสือเรียบร้อยแล้ว!");
+        }
+      }
+    }
+
+    // ฟังก์ชันแสดงรายการหนังสือฝั่งสมาชิก
     function renderBooks() {
       const container = document.getElementById('book-list');
       if (!container) return;
@@ -210,6 +249,39 @@
       container.innerHTML = html;
     }
 
+    // ฟังก์ชันแสดงตารางจัดการหนังสือฝั่ง Admin
+    function renderAdminBookTable() {
+      const tbody = document.getElementById('admin-book-manage-list');
+      if (!tbody) return;
+
+      if (books.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">ยังไม่มีรายการหนังสือในระบบ</td></tr>`;
+        return;
+      }
+
+      let html = '';
+      books.forEach(book => {
+        const imgUrl = book.image || defaultImg;
+        html += `
+          <tr class="border-b border-slate-100 hover:bg-slate-50">
+            <td class="p-3">
+              <img src="${imgUrl}" alt="${book.title}" class="w-12 h-16 object-cover rounded shadow-sm" onerror="this.src='${defaultImg}'">
+            </td>
+            <td class="p-4 font-semibold text-slate-800">${book.title}</td>
+            <td class="p-4 text-slate-600">${book.author}</td>
+            <td class="p-4"><span class="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-md text-xs font-medium">${book.category}</span></td>
+            <td class="p-4 font-bold ${book.stock > 0 ? 'text-emerald-600' : 'text-rose-500'}">${book.stock} เล่ม</td>
+            <td class="p-4 text-center">
+              <button onclick="deleteBook(${book.id})" class="bg-rose-500 hover:bg-rose-600 text-white text-xs px-3 py-1.5 rounded-lg transition shadow-sm">
+                🗑️ ลบ
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html;
+    }
+
     // ฟังก์ชันกดยืมหนังสือ
     function borrowBook(bookId) {
       const book = books.find(b => b.id === bookId);
@@ -239,7 +311,7 @@
       }
     }
 
-    // ฟังก์ชันแสดงตาราง Admin
+    // ฟังก์ชันแสดงตารางประวัติยืม-คืน Admin
     function renderAdminTable() {
       const tbody = document.getElementById('admin-borrow-list');
       if (!tbody) return;
@@ -286,6 +358,7 @@
         localStorage.setItem('borrowHistory', JSON.stringify(borrowHistory));
         renderBooks();
         renderAdminTable();
+        renderAdminBookTable();
       }
     }
 
@@ -303,6 +376,7 @@
           adminView.classList.remove('hidden');
           btnAdmin.classList.add('bg-indigo-800');
           btnUser.classList.remove('bg-indigo-800');
+          renderAdminBookTable();
           renderAdminTable();
         } else if (password !== null) {
           alert("รหัสผ่านไม่ถูกต้อง!");
