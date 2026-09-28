@@ -27,13 +27,16 @@
   <div id="view-user" class="flex-grow">
     <header class="bg-indigo-700 text-white py-10 text-center shadow-inner">
       <h2 class="text-3xl font-extrabold mb-2">ค้นพบความรู้ที่ไม่รู้จบ</h2>
-      <p class="text-indigo-200">เลือกยืมหนังสือที่ต้องการได้ทันที บันทึกข้อมูลรวดเร็วผ่าน Google Sheets</p>
+      <p class="text-indigo-200">เลือกยืมหนังสือที่ต้องการได้ทันที ซิงค์ข้อมูลเรียลไทม์ผ่าน Google Sheets</p>
     </header>
 
     <main class="max-w-6xl mx-auto p-6">
-      <h3 class="text-2xl font-bold mb-6 text-slate-700">รายการหนังสือทั้งหมด</h3>
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-2xl font-bold text-slate-700">รายการหนังสือทั้งหมด</h3>
+        <button onclick="loadBooks()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-xs px-3 py-2 rounded-lg font-medium transition">🔄 รีเฟรชข้อมูล</button>
+      </div>
       <div id="book-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        <div class="col-span-full text-center py-10 text-slate-400">กำลังโหลดข้อมูลหนังสือ...</div>
+        <div class="col-span-full text-center py-10 text-slate-400">กำลังโหลดข้อมูลหนังสือจาก Google Sheets...</div>
       </div>
     </main>
   </div>
@@ -45,7 +48,7 @@
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-6 rounded-xl shadow-md border border-slate-200 mb-6 gap-4">
         <div>
           <h2 class="text-2xl font-bold text-slate-800">🔒 แผงควบคุมบรรณารักษ์</h2>
-          <p class="text-slate-500 text-sm">จัดการหนังสือ ตรวจสอบการยืม-คืน เพิ่มรายการหนังสือ (เชื่อมต่อ Google Sheets)</p>
+          <p class="text-slate-500 text-sm">จัดการหนังสือ ตรวจสอบสถานะการยืม และกดคืนหนังสือ</p>
         </div>
         <button onclick="changePassword()" class="bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs px-4 py-2 rounded-lg transition shadow-sm">
           ⚙️ เปลี่ยนรหัสผ่าน Admin
@@ -142,22 +145,31 @@
     const defaultImg = "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=400&q=80";
     let adminPassword = localStorage.getItem('adminPassword') || '1234';
     
-    // URL ของ Apps Script ของคุณ
+    // 🔗 URL ของ Apps Script ของคุณ
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycb2-4X_XgoPTB4MPQXcvP7Bj38MD6EnJo8IZ5IMaTZ1ksydzKJjSthOfc52m5c7/exec";
     
-    // โหลดข้อมูลจาก LocalStorage ถ้ามี หรือใช้ค่าเริ่มต้น
-    let booksData = JSON.parse(localStorage.getItem('smartLibraryBooks')) || [
-      { id: '1', title: 'CONVER พูดมันส์ 1,000 ประโยค', author: 'ครูดิว OPENDURIAN', category: 'English', image: 'https://api.chulabook.com/images/pid-184204.webp', stock: 1, borrowerName: null, borrowerGrade: null, borrowerRoom: null }
-    ];
-
+    let booksData = [];
     let selectedBookId = null;
 
-    function saveToLocalStorage() {
-      localStorage.setItem('smartLibraryBooks', JSON.stringify(booksData));
+    // โหลดข้อมูลทั้งหมดจาก Google Sheets
+    async function loadBooks() {
+      try {
+        const response = await fetch(SCRIPT_URL);
+        booksData = await response.json();
+        renderBooks();
+        renderAdminBookTable();
+      } catch (error) {
+        console.error("โหลดข้อมูลไม่สำเร็จ:", error);
+      }
     }
 
     function renderBooks() {
       const container = document.getElementById('book-list');
+      if (booksData.length === 0) {
+        container.innerHTML = `<div class="col-span-full text-center py-10 text-slate-400">ยังไม่มีหนังสือในระบบ</div>`;
+        return;
+      }
+
       let html = '';
       booksData.forEach(book => {
         const isAvailable = book.stock > 0;
@@ -193,6 +205,11 @@
 
     function renderAdminBookTable() {
       const tbody = document.getElementById('admin-book-manage-list');
+      if (booksData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">ยังไม่มีหนังสือในระบบ</td></tr>`;
+        return;
+      }
+
       let html = '';
       booksData.forEach(book => {
         const imgUrl = book.image || defaultImg;
@@ -233,7 +250,7 @@
       selectedBookId = null;
     }
 
-    // ฟอร์มกดยืนยันการยืม
+    // ยืนยันการยืมหนังสือ
     async function submitBorrow(e) {
       e.preventDefault();
       const name = document.getElementById('borrower-name').value.trim();
@@ -246,19 +263,13 @@
 
       const book = booksData.find(b => b.id === selectedBookId);
       if (book) {
-        book.stock = 0;
-        book.borrowerName = name;
-        book.borrowerGrade = grade;
-        book.borrowerRoom = room;
-        saveToLocalStorage();
-
         const payload = {
           action: "borrow",
+          id: book.id,
           title: book.title,
           name: name,
           grade: grade,
-          room: room,
-          timestamp: new Date().toISOString()
+          room: room
         };
 
         try {
@@ -268,15 +279,11 @@
             body: JSON.stringify(payload)
           });
           
-          alert(`ยืมหนังสือ "${book.title}" สำเร็จ!\nผู้ยืม: ${name} ชั้น ${grade}/${room}`);
+          alert(`ยืมหนังสือ "${book.title}" สำเร็จ!`);
           closeBorrowModal();
-          renderBooks();
-          renderAdminBookTable();
+          setTimeout(loadBooks, 1000); // โหลดข้อมูลใหม่จาก Sheets
         } catch (error) {
-          alert("บันทึกข้อมูลสำเร็จในระบบ แต่เกิดข้อผิดพลาดในการส่งไป Google Sheets: " + error.message);
-          closeBorrowModal();
-          renderBooks();
-          renderAdminBookTable();
+          alert("เกิดข้อผิดพลาด: " + error.message);
         } finally {
           btn.disabled = false;
           btn.innerText = "ยืนยันการยืม";
@@ -285,24 +292,31 @@
     }
 
     // แอดมินกดคืนหนังสือ
-    function returnBook(bookId) {
+    async function returnBook(bookId) {
       const book = booksData.find(b => b.id === bookId);
       if (book) {
-        if (confirm(`ยืนยันการรับคืนหนังสือ "${book.title}" จาก ${book.borrowerName}?`)) {
-          book.stock = 1;
-          book.borrowerName = null;
-          book.borrowerGrade = null;
-          book.borrowerRoom = null;
-          saveToLocalStorage();
+        if (confirm(`ยืนยันการรับคืนหนังสือ "${book.title}"?`)) {
+          const payload = {
+            action: "return",
+            id: book.id
+          };
 
-          alert(`คืนหนังสือ "${book.title}" เรียบร้อยแล้ว หนังสือกลับมาพร้อมให้ยืมอีกครั้ง`);
-          renderBooks();
-          renderAdminBookTable();
+          try {
+            await fetch(SCRIPT_URL, {
+              method: "POST",
+              mode: "no-cors",
+              body: JSON.stringify(payload)
+            });
+            
+            alert(`คืนหนังสือ "${book.title}" เรียบร้อยแล้ว`);
+            setTimeout(loadBooks, 1000); // โหลดข้อมูลใหม่จาก Sheets
+          } catch (error) {
+            alert("เกิดข้อผิดพลาด: " + error.message);
+          }
         }
       }
     }
 
-    // ระบบบีบอัดภาพความเร็วสูง
     function processImageFileFast(file) {
       return new Promise((resolve) => {
         const timer = setTimeout(() => resolve(defaultImg), 1000);
@@ -326,12 +340,12 @@
       });
     }
 
-    // ฟังก์ชันเพิ่มหนังสือใหม่
+    // เพิ่มหนังสือใหม่
     async function addNewBook(e) {
       e.preventDefault();
       const btn = document.getElementById('btn-submit-book');
       btn.disabled = true;
-      btn.innerText = "⚡กำลังบันทึกข้อมูลแบบด่วน...";
+      btn.innerText = "⚡กำลังบันทึกข้อมูล...";
 
       const title = document.getElementById('new-title').value.trim();
       const author = document.getElementById('new-author').value.trim();
@@ -347,23 +361,9 @@
         image = urlImg;
       }
 
-      const newBookObj = { 
-        id: Date.now().toString(), 
-        title, 
-        author, 
-        category, 
-        image, 
-        stock, 
-        borrowerName: null, 
-        borrowerGrade: null, 
-        borrowerRoom: null 
-      };
-
-      booksData.push(newBookObj);
-      saveToLocalStorage();
-
       const payload = {
         action: "addBook",
+        id: Date.now().toString(),
         title: title,
         author: author,
         category: category,
@@ -379,9 +379,6 @@
         });
         
         alert(`เพิ่มหนังสือ "${title}" เรียบร้อยแล้ว!`);
-        renderBooks();
-        renderAdminBookTable();
-
         document.getElementById('new-title').value = '';
         document.getElementById('new-author').value = '';
         document.getElementById('new-category').value = '';
@@ -389,10 +386,9 @@
         document.getElementById('new-image-file').value = '';
         document.getElementById('new-stock').value = '1';
 
+        setTimeout(loadBooks, 1000);
       } catch (error) {
-        alert("เพิ่มหนังสือสำเร็จในระบบ");
-        renderBooks();
-        renderAdminBookTable();
+        alert("เกิดข้อผิดพลาด: " + error.message);
       } finally {
         btn.disabled = false;
         btn.innerText = "บันทึกเพิ่มหนังสือ";
@@ -426,7 +422,7 @@
           adminView.classList.remove('hidden');
           btnAdmin.classList.add('bg-indigo-800');
           btnUser.classList.remove('bg-indigo-800');
-          renderAdminBookTable(); // อัปเดตตารางแอดมินทุกครั้งที่เปิด
+          loadBooks(); // โหลดข้อมูลสดๆ เมื่อเปิดโหมดแอดมิน
         } else if (password !== null) {
           alert("รหัสผ่านไม่ถูกต้อง!");
         }
@@ -435,12 +431,12 @@
         adminView.classList.add('hidden');
         btnUser.classList.add('bg-indigo-800');
         btnAdmin.classList.remove('bg-indigo-800');
+        loadBooks(); // โหลดข้อมูลสดๆ เมื่อกลับหน้าสมาชิก
       }
     }
 
-    // เริ่มต้นทำงานแสดงผล
-    renderBooks();
-    renderAdminBookTable();
+    // โหลดข้อมูลอัตโนมัติทันทีที่เปิดเว็บ
+    loadBooks();
   </script>
 </body>
 </html>
