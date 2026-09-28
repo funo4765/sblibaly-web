@@ -11,7 +11,7 @@
   <!-- แถบเมนูด้านบน -->
   <nav class="bg-indigo-600 text-white p-4 shadow-lg sticky top-0 z-50">
     <div class="max-w-6xl mx-auto flex justify-between items-center">
-      <h1 class="text-xl font-bold cursor-pointer" onclick="showTab('user')">📚 SmartLibrary</h1>
+      <h1 class="text-xl font-bold cursor-pointer flex items-center gap-2" onclick="showTab('user')">📚 SmartLibrary</h1>
       <div class="space-x-2">
         <button onclick="showTab('user')" id="btn-user-tab" class="px-4 py-2 rounded-lg bg-indigo-800 font-medium text-sm transition">
           👤 หน้าสมาชิก
@@ -32,7 +32,7 @@
 
     <main class="max-w-6xl mx-auto p-6">
       <h3 class="text-2xl font-bold mb-6 text-slate-700">รายการหนังสือทั้งหมด</h3>
-      <div id="book-list" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div id="book-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         <!-- รายการหนังสือแสดงตรงนี้ -->
       </div>
     </main>
@@ -42,27 +42,34 @@
   <div id="view-admin" class="hidden flex-grow">
     <main class="max-w-6xl mx-auto p-6">
       
-      <!-- ฟอร์มเพิ่มหนังสือใหม่ -->
+      <!-- หัวข้อ + ปุ่มเปลี่ยนรหัสผ่าน -->
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-6 rounded-xl shadow-md border border-slate-200 mb-6 gap-4">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-800">🔒 แผงควบคุมบรรณารักษ์</h2>
+          <p class="text-slate-500 text-sm">จัดการหนังสือและตรวจสอบการยืม-คืน</p>
+        </div>
+        <button onclick="changePassword()" class="bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs px-4 py-2 rounded-lg transition shadow-sm">
+          ⚙️ เปลี่ยนรหัสผ่าน Admin
+        </button>
+      </div>
+
+      <!-- ฟอร์มเพิ่มหนังสือใหม่ (พร้อมช่องใส่รูป) -->
       <div class="bg-white rounded-xl shadow-md p-6 border border-slate-200 mb-8">
-        <h3 class="text-lg font-bold text-slate-800 mb-4">➕ เพิ่มหนังสือเล่มใหม่เข้าห้องสมุด</h3>
-        <form onsubmit="addNewBook(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <h3 class="text-lg font-bold text-slate-800 mb-4">➕ เพิ่มหนังสือเล่มใหม่</h3>
+        <form onsubmit="addNewBook(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <input type="text" id="new-title" placeholder="ชื่อหนังสือ..." required class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
           <input type="text" id="new-author" placeholder="ชื่อผู้แต่ง..." required class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
           <input type="text" id="new-category" placeholder="หมวดหมู่ (เช่น วิชาการ, วรรณกรรม)..." required class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
-          <div class="flex gap-2">
-            <input type="number" id="new-stock" placeholder="จำนวน" min="1" value="1" required class="w-24 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
-            <button type="submit" class="flex-grow bg-emerald-600 text-white font-medium text-sm rounded-lg hover:bg-emerald-700 transition">
-              บันทึกเพิ่มหนังสือ
-            </button>
-          </div>
+          <input type="url" id="new-image" placeholder="ลิงก์ URL รูปภาพปก (ถ้ามี)" class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <input type="number" id="new-stock" placeholder="จำนวนหนังสือ" min="1" value="1" required class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <button type="submit" class="bg-emerald-600 text-white font-medium text-sm rounded-lg hover:bg-emerald-700 transition py-2">
+            บันทึกเพิ่มหนังสือ
+          </button>
         </form>
       </div>
 
-      <div class="flex justify-between items-center mb-6">
-        <div>
-          <h2 class="text-2xl font-bold text-slate-800">🔒 ประวัติการยืม-คืนหนังสือ</h2>
-          <p class="text-slate-500 text-sm">รายการยืมหนังสือทั้งหมดในระบบ</p>
-        </div>
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold text-slate-800">📋 ประวัติการยืม-คืน</h3>
         <button onclick="clearHistory()" class="text-xs text-rose-600 border border-rose-200 hover:bg-rose-50 px-3 py-1.5 rounded-lg">
           ล้างประวัติการยืม
         </button>
@@ -94,18 +101,39 @@
   </footer>
 
   <script>
-    // ข้อมูลหนังสือเริ่มต้น (ดึงจาก LocalStorage หรือใช้ค่าเริ่มต้น)
+    // รูปภาพปกหนังสือเริ่มต้น
+    const defaultImg = "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=400&q=80";
+
+    // ข้อมูลหนังสือเริ่มต้น
     let defaultBooks = [
-      { id: 1, title: "คู่มือพัฒนาเว็บแอปพลิเคชันด้วย JavaScript", author: "สมชาย ใจดี", category: "วิทยาศาสตร์/คอมพิวเตอร์", stock: 3 },
-      { id: 2, title: "การเดินทางของเจ้าชายแห่งดวงดาว", author: "อองตวน เดอ แซงเตกซูเปรี", category: "วรรณกรรม", stock: 1 },
-      { id: 3, title: "คณิตศาสตร์และการประยุกต์ใช้งาน", author: "ดร.วิชาญ เรียนดี", category: "วิชาการ", stock: 2 }
+      { id: 1, title: "คู่มือพัฒนาเว็บด้วย JavaScript", author: "สมชาย ใจดี", category: "คอมพิวเตอร์", stock: 3, image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=400&q=80" },
+      { id: 2, title: "เจ้าชายแห่งดวงดาว", author: "อองตวน เดอ แซงเตกซูเปรี", category: "วรรณกรรม", stock: 1, image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=400&q=80" },
+      { id: 3, title: "คณิตศาสตร์และการประยุกต์", author: "ดร.วิชาญ เรียนดี", category: "วิชาการ", stock: 2, image: "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=400&q=80" }
     ];
 
     let books = JSON.parse(localStorage.getItem('booksData')) || defaultBooks;
     let borrowHistory = JSON.parse(localStorage.getItem('borrowHistory')) || [];
+    let adminPassword = localStorage.getItem('adminPassword') || '1234';
 
     function saveBooks() {
       localStorage.setItem('booksData', JSON.stringify(books));
+    }
+
+    // ฟังก์ชันเปลี่ยนรหัสผ่าน Admin
+    function changePassword() {
+      const currentPass = prompt("กรุณากรอกรหัสผ่านปัจจุบัน:");
+      if (currentPass === adminPassword) {
+        const newPass = prompt("กรุณากรอกรหัสผ่านใหม่ที่ต้องการ:");
+        if (newPass && newPass.trim() !== "") {
+          adminPassword = newPass.trim();
+          localStorage.setItem('adminPassword', adminPassword);
+          alert("เปลี่ยนรหัสผ่านเรียบร้อยแล้ว!");
+        } else {
+          alert("รหัสผ่านต้องไม่เป็นค่าว่าง");
+        }
+      } else if (currentPass !== null) {
+        alert("รหัสผ่านปัจจุบันไม่ถูกต้อง!");
+      }
     }
 
     // ฟังก์ชันเพิ่มหนังสือใหม่
@@ -114,6 +142,7 @@
       const title = document.getElementById('new-title').value.trim();
       const author = document.getElementById('new-author').value.trim();
       const category = document.getElementById('new-category').value.trim();
+      const image = document.getElementById('new-image').value.trim() || defaultImg;
       const stock = parseInt(document.getElementById('new-stock').value) || 1;
 
       if (title && author && category) {
@@ -122,6 +151,7 @@
           title: title,
           author: author,
           category: category,
+          image: image,
           stock: stock
         };
 
@@ -133,13 +163,14 @@
         document.getElementById('new-title').value = '';
         document.getElementById('new-author').value = '';
         document.getElementById('new-category').value = '';
+        document.getElementById('new-image').value = '';
         document.getElementById('new-stock').value = '1';
 
         alert(`เพิ่มหนังสือ "${title}" เรียบร้อยแล้ว!`);
       }
     }
 
-    // ฟังก์ชันแสดงรายการหนังสือ
+    // ฟังก์ชันแสดงรายการหนังสือพร้อมรูปภาพ
     function renderBooks() {
       const container = document.getElementById('book-list');
       if (!container) return;
@@ -147,22 +178,32 @@
       let html = '';
       books.forEach(book => {
         const isAvailable = book.stock > 0;
+        const imgUrl = book.image || defaultImg;
         html += `
-          <div class="bg-white rounded-xl shadow-md p-5 flex flex-col justify-between border border-slate-100">
+          <div class="bg-white rounded-xl shadow-md overflow-hidden flex flex-col justify-between border border-slate-100 hover:shadow-lg transition">
             <div>
-              <span class="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2.5 py-0.5 rounded">${book.category}</span>
-              <h4 class="text-lg font-bold mt-2 text-slate-800">${book.title}</h4>
-              <p class="text-sm text-slate-500 mt-1">ผู้แต่ง: ${book.author}</p>
-              <p class="text-sm ${isAvailable ? 'text-emerald-600' : 'text-rose-500'} font-medium mt-2">
-                สถานะ: ${isAvailable ? 'คงเหลือ ' + book.stock + ' เล่ม' : 'ถูกยืมหมดแล้ว'}
-              </p>
+              <div class="h-48 w-full bg-slate-100 overflow-hidden relative">
+                <img src="${imgUrl}" alt="${book.title}" class="w-full h-full object-cover" onerror="this.src='${defaultImg}'">
+                <span class="absolute top-2 right-2 text-xs bg-indigo-600 text-white font-semibold px-2.5 py-1 rounded-full shadow">
+                  ${book.category}
+                </span>
+              </div>
+              <div class="p-4">
+                <h4 class="text-base font-bold text-slate-800 line-clamp-1">${book.title}</h4>
+                <p class="text-xs text-slate-500 mt-1">ผู้แต่ง: ${book.author}</p>
+                <p class="text-xs ${isAvailable ? 'text-emerald-600' : 'text-rose-500'} font-semibold mt-2">
+                  สถานะ: ${isAvailable ? 'คงเหลือ ' + book.stock + ' เล่ม' : 'ถูกยืมหมดแล้ว'}
+                </p>
+              </div>
             </div>
-            <button 
-              onclick="borrowBook(${book.id})" 
-              class="mt-4 w-full py-2.5 rounded-lg font-medium transition ${isAvailable ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}"
-              ${!isAvailable ? 'disabled' : ''}>
-              ${isAvailable ? '📖 กดยืมหนังสือเล่มนี้' : 'ถูกยืมหมดแล้ว'}
-            </button>
+            <div class="p-4 pt-0">
+              <button 
+                onclick="borrowBook(${book.id})" 
+                class="w-full py-2 rounded-lg text-sm font-medium transition ${isAvailable ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}"
+                ${!isAvailable ? 'disabled' : ''}>
+                ${isAvailable ? '📖 กดยืมหนังสือ' : 'ถูกยืมหมดแล้ว'}
+              </button>
+            </div>
           </div>
         `;
       });
@@ -256,8 +297,8 @@
       const btnAdmin = document.getElementById('btn-admin-tab');
 
       if (tabName === 'admin') {
-        const password = prompt("กรุณากรอกรหัสผ่านบรรณารักษ์ (รหัสทดสอบ: 1234):");
-        if (password === '1234') {
+        const password = prompt("กรุณากรอกรหัสผ่านบรรณารักษ์:");
+        if (password === adminPassword) {
           userView.classList.add('hidden');
           adminView.classList.remove('hidden');
           btnAdmin.classList.add('bg-indigo-800');
